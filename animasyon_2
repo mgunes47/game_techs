@@ -1,0 +1,105 @@
+// --- ANA AYARLAR ---
+int numDots = 6;
+float radius = 50;
+float dotSize = 8;
+float period = 1.5;
+float delay = 0.15;
+float waitZone = 0.85;  // Turun %85'inde beklemeye başla
+
+// --- DÖNGÜ VE HİKAYE AYARLARI ---
+int restartCycle = 3;
+float restartDelay = 0.5;
+
+// --- RENKLER ---
+color backgroundColor;
+color dotColor;
+
+// --- ZAMANLAMA DEĞİŞKENLERİ ---
+float resetTime = 0;
+float totalSequenceTime;
+
+void setup() {
+  size(400, 400);
+  noStroke();
+  
+  backgroundColor = color(0, 100, 200);
+  dotColor = color(255);
+  
+  // Son noktanın da sıralanması için ek süre
+  float extraWaitTime = (numDots - 1) * delay;
+  totalSequenceTime = (restartCycle * period) + extraWaitTime + 0.1;
+}
+
+void draw() {
+  background(backgroundColor);
+  translate(width / 2, height / 2);
+  float currentTime = millis() / 1000.0;
+  float t = currentTime - resetTime; 
+  
+  if (t < totalSequenceTime) {
+    drawNormalAnimation(t);
+  } 
+  else {
+    float timeSinceSequenceEnded = t - totalSequenceTime;
+    
+    if (timeSinceSequenceEnded < restartDelay) {
+      return; 
+    } 
+    else {
+      resetTime = currentTime; // animasyonu başa al
+    }
+  }
+}
+
+void drawNormalAnimation(float t) {
+  float lastDotTime = t - (numDots - 1) * delay;
+  int lastDotCycle = lastDotTime > 0 ? floor(lastDotTime / period) : -1;
+  
+  for (int i = 0; i < numDots; i++) {
+    float dotTime = t - i * delay;
+    if (dotTime < 0) continue; 
+    
+    int dotCycle = floor(dotTime / period);
+    if (dotCycle >= 3) continue;
+    
+    float progress = (dotTime % period) / period;
+    float angle;
+    
+    // Opaklık artık sabit 255
+    float opacity = 255;
+    
+    boolean shouldWait = (progress >= waitZone) && (dotCycle > lastDotCycle);
+    
+    if (shouldWait) {
+      float easedWaitProgress = (1 - cos(waitZone * PI)) / 2.0;
+      float accelWait = easedWaitProgress * easedWaitProgress;
+      
+      if (dotCycle == 0) {
+        angle = HALF_PI + accelWait * PI - (i * 0.12);
+      } else if (dotCycle == 1) {
+        angle = 3 * HALF_PI + accelWait * TWO_PI - (i * 0.12);
+      } else {
+        angle = 3 * HALF_PI + accelWait * PI - (i * 0.12);
+      }
+    } 
+    else {
+      float easedProgress = (1 - cos(progress * PI)) / 2.0;
+      float accelerationEasing = easedProgress * easedProgress;
+      
+      if (dotCycle == 0) { 
+        angle = HALF_PI + accelerationEasing * PI; // 6'dan 12'ye
+      } 
+      else if (dotCycle == 1) {
+        angle = 3 * HALF_PI + accelerationEasing * TWO_PI; // Tam tur
+      }
+      else {
+        angle = 3 * HALF_PI + accelerationEasing * PI; // 12'den 6'ya
+      }
+    }
+    
+    fill(dotColor, opacity);
+    float x = cos(angle) * radius;
+    float y = sin(angle) * radius;
+    ellipse(x, y, dotSize, dotSize);
+  }
+}
