@@ -1,0 +1,105 @@
+// --- ANA AYARLAR ---
+int numDots = 6;
+float radius = 70;
+float dotSize = 11;
+float period = 2.0;
+float delay = 0.15;
+// --- DÖNGÜ VE HİKAYE AYARLARI ---
+int restartCycle = 3;
+float restartDelay = 0.5;
+// --- RENKLER ---
+color backgroundColor;
+color dotColor;
+// --- ZAMANLAMA DEĞİŞKENLERİ ---
+float resetTime = 0;
+float totalSequenceTime;
+
+void setup() {
+  size(400, 400);
+  noStroke();
+  
+  backgroundColor = color(0, 100, 200);
+  dotColor = color(255);
+  
+  totalSequenceTime = (restartCycle * period) + ((numDots - 1) * delay) + 0.1;
+}
+
+void draw() {
+  background(backgroundColor);
+  translate(width / 2, height / 2);
+  float currentTime = millis() / 1000.0;
+  float t = currentTime - resetTime; 
+  
+  if (t < totalSequenceTime) {
+    drawNormalAnimation(t);
+  } 
+  else {
+    float timeSinceSequenceEnded = t - totalSequenceTime;
+    
+    if (timeSinceSequenceEnded < restartDelay) {
+      return; 
+    } 
+    else {
+      resetTime = currentTime - (timeSinceSequenceEnded - restartDelay);
+    }
+  }
+}
+
+void drawNormalAnimation(float t) {
+  
+  for (int i = 0; i < numDots; i++) {
+    
+    float dotTime = t - i * delay;
+    
+    if (dotTime < 0) {
+      continue; 
+    }
+    int dotCycle = floor(dotTime / period);
+    
+    if (dotCycle >= 3) {
+      continue;
+    }
+    
+    float progress = (dotTime % period) / period;
+    float easedProgress = (1 - cos(progress * PI)) / 2.0;
+    float angle;
+    
+    // Tur 1 (dotCycle 0): 180° -> 540° (tam tur)
+    if (dotCycle == 0) { 
+      angle = PI + easedProgress * TWO_PI;
+    } 
+    // Tur 2 (dotCycle 1): 540° -> 900° (tam tur)
+    else if (dotCycle == 1) {
+      angle = PI + TWO_PI + easedProgress * TWO_PI;
+    }
+    // Tur 3 (dotCycle 2): 900° -> 1170° (270° ark)
+    else {
+      float thirdTourRotation = easedProgress * (3 * HALF_PI);
+      angle = PI + TWO_PI + TWO_PI + thirdTourRotation;
+      
+      float normalizedAngle = angle % TWO_PI;
+      if (abs(normalizedAngle - HALF_PI) < 0.1) {
+        continue;
+      }
+    }
+    
+    // Opaklık hesaplama - her turda daha belirgin
+    float opacity = 255;
+    if (dotCycle == 0) {
+      // İlk turda fade in
+      opacity = 255 * easedProgress;
+    } else if (dotCycle == 2) {
+      // Son turda saat 6'ya yaklaşınca fade out
+      float normalizedAngle = angle % TWO_PI;
+      float distanceToSix = abs(normalizedAngle - HALF_PI);
+      if (distanceToSix < 0.3) {
+        opacity = 255 * (distanceToSix / 0.3);
+      }
+    }
+    
+    fill(dotColor, opacity);
+    float x = cos(angle) * radius;
+    float y = sin(angle) * radius;
+    ellipse(x, y, dotSize, dotSize);
+  }
+}
